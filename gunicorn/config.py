@@ -1633,6 +1633,33 @@ class PrometheusHost(Setting):
     .. versionadded:: 19.1
     """
 
+
+# prometheus monitoring
+class OtelMetricsExporter(Setting):
+    name = "otel_metrics_exporter"
+    section = "Logging"
+    cli = ["--otel-metrics-exporter"]
+    meta = "OTEL_METRICS_EXPORTER"
+    default = "otlp"
+    validator = validate_string
+    desc = """\
+    otel exporter to use
+
+    .. versionadded:: 19.1
+    """
+
+class ExporterIntervalMillis(Setting):
+    name = "otel_exporter_millis"
+    section = "Logging"
+    cli = ["--otel-exporter-millis"]
+    meta = "INT"
+    validator = validate_pos_int
+    type = int
+    default = 15000
+    desc = """\
+        How often we should report metrics to otel
+        """
+
 # Datadog Statsd (dogstatsd) tags. https://docs.datadoghq.com/developers/dogstatsd/
 class DogstatsdTags(Setting):
     name = "dogstatsd_tags"

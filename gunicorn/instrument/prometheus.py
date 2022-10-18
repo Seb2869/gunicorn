@@ -42,11 +42,12 @@ class Prometheus(Logger):
         exporter = OTLPMetricExporter(
             endpoint=endpoint, insecure=True, preferred_temporality=temporality_cumulative
         )
-        if getenv("OTEL_METRICS_EXPORTER", "otlp") == "console":
+        if cfg.otel_metrics_exporter == "console":
             exporter = ConsoleMetricExporter()
+
         reader = PeriodicExportingMetricReader(
             exporter,
-            export_interval_millis=5000,
+            export_interval_millis=float(cfg.otel_exporter_millis),
         )
         provider = MeterProvider(metric_readers=[reader])
         set_meter_provider(provider)
