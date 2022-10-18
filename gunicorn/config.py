@@ -156,6 +156,8 @@ class Config(object):
         if uri == LoggerClass.default:
             if 'statsd_host' in self.settings and self.settings['statsd_host'].value is not None:
                 uri = "gunicorn.instrument.statsd.Statsd"
+            elif 'otlp_endpoint' in self.settings and self.settings['otlp_endpoint'].value is not None:
+                uri = "gunicorn.instrument.prometheus.Prometheus"
 
         logger_class = util.load_class(
             uri,
@@ -1374,7 +1376,7 @@ class AccessLogFormat(Setting):
     cli = ["--access-logformat"]
     meta = "STRING"
     validator = validate_string
-    default = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+    default = '%(h)s - %(L)s %(u)s %(t)s - %(T)s - "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
     desc = """\
         The access log format.
 
@@ -1613,6 +1615,20 @@ class StatsdHost(Setting):
     validator = validate_hostport
     desc = """\
     ``host:port`` of the statsd server to log to.
+
+    .. versionadded:: 19.1
+    """
+
+# prometheus monitoring
+class PrometheusHost(Setting):
+    name = "otlp_endpoint"
+    section = "Logging"
+    cli = ["--otlp-endpoint"]
+    meta = "OTEL_METRICS_EXPORTER_OTLP_ENDPOINT"
+    default = None
+    validator = validate_hostport
+    desc = """\
+    ``host:port`` of the prometheus server to log to.
 
     .. versionadded:: 19.1
     """
@@ -1966,7 +1982,6 @@ class OnExit(Setting):
 
         The callable needs to accept a single instance variable for the Arbiter.
         """
-
 
 class ProxyProtocol(Setting):
     name = "proxy_protocol"
