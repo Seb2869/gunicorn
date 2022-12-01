@@ -19,16 +19,16 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
     PeriodicExportingMetricReader,
 )
+from opentelemetry.sdk.resources import Resource
 
 from gunicorn.glogging import Logger
 
 
 class Prometheus(Logger):
-    """prometheus-based instrumentation, that passes as a logger
-    """
+    """prometheus-based instrumentation, that passes as a logger"""
+
     def __init__(self, cfg):
-        """host, port: prometheus server
-        """
+        """host, port: prometheus server"""
         Logger.__init__(self, cfg)
 
         temporality_cumulative = {
@@ -39,9 +39,7 @@ class Prometheus(Logger):
         host, port = cfg.otlp_endpoint
         endpoint = f"{host}:{port}"
 
-        exporter = OTLPMetricExporter(
-            endpoint=endpoint, insecure=True, preferred_temporality=temporality_cumulative
-        )
+        exporter = OTLPMetricExporter(endpoint=endpoint, insecure=True, preferred_temporality=temporality_cumulative)
         if cfg.otel_metrics_exporter == "console":
             exporter = ConsoleMetricExporter()
 
@@ -49,12 +47,14 @@ class Prometheus(Logger):
             exporter,
             export_interval_millis=float(cfg.otel_exporter_millis),
         )
-        provider = MeterProvider(metric_readers=[reader])
+        provider = MeterProvider(
+            metric_readers=[reader], resource=Resource.create({"k8s.pod.name": getenv("KUBE_POD_NAME", "unknown")})
+        )
         set_meter_provider(provider)
 
         meter = get_meter_provider().get_meter("gunicorn")
         self.log_counter = meter.create_counter("gunicorn.log")
-        self.request_histogram = meter.create_histogram("gunicorn.request", unit="ms")
+        self.request_histogram = meter.create_histogram("gunicorn.request.time", unit="ms")
 
         logging.getLogger("gunicorn.access").addHandler(UvicornHandler(self.request_histogram))
 
@@ -84,13 +84,11 @@ class Prometheus(Logger):
         self.log(logging.DEBUG, msg, *args, **kwargs)
 
     def log(self, lvl, msg, *args, **kwargs):
-        """Log a given statistic if metric, value and type are present
-        """
+        """Log a given statistic if metric, value and type are present"""
         Logger.log(self, lvl, msg, *args, **kwargs)
 
 
 class UvicornHandler(logging.Handler):
-
     def __init__(self, histogram):
         super().__init__()
         self.histogram = histogram
